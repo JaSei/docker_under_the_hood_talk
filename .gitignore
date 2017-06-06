@@ -1,0 +1,4 @@
+examples/04_overlay/images/
+
+examples/*/cpanfile.snapshot
+examples/*/local/

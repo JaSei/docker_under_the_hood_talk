@@ -1,0 +1,700 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Docker under the hood or how create own container</title>
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/solarized.css">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+	<body>
+		<div class="reveal">
+			<div class="slides">
+                <section>
+				    <section data-markdown>
+                        <script type="text/template">
+                            # Docker under the hood
+                            ## or how create own container
+
+                            Jan Seidl <seidl@avast.com> Viruslab Systems | Luft
+
+                            https://github.com/jasei
+
+                            Note:
+                            What is Luft project?
+                        </script>
+                    </section>
+                </section>
+
+                <section>
+				    <section data-markdown>
+                        <script type="text/template">
+                            <!-- .slide: data-background-image="img/hobo-531201_1920.jpg" -->
+                            # what is container? <!-- .element: class="fragment opacity-bg" -->
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### what is container?
+
+                            * lightweight vm
+                            * own process space
+                            * own network interface
+                            * use the host kernel
+                            * own linux distribution (packages)
+                            * stuff like root
+                            * ...
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### what is container?
+
+                            > Linux container to put it simply it is a usual Linux process (or group of processes) with a limited (altered) view of the system.
+
+                            Note:
+                            My favorit definition
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### what is container?
+
+                            * lxc
+                            * runc 
+                            * openvz 
+                            * ... 
+
+                            Note:
+                            * runc = `runC is a CLI tool for spawning and running containers according to the OCI specification`
+                            * docker 1.11+ use runc, previous use lxc
+                        </script>
+                    </section>
+                </section>
+
+                <section>
+				    <section data-markdown>
+                        <script type="text/template">
+                            <!-- .slide: data-background-image="img/construction-site-1156567_1920.jpg" -->
+                            # container building blocks <!-- .element: class="fragment opacity-bg"  -->
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### container building blocks 
+
+                            * linux namespaces  
+                            * cgroups
+                            * union file system
+                            * iptables
+                            * linux capabilities
+                        </script>
+                    </section>
+                </section>
+
+                <section>
+				    <section data-markdown>
+                        <script type="text/template">
+                            <!-- .slide: data-background-image="img/belgium-1601917_1920.jpg" -->
+                            # linux namespaces <!-- .element: class="fragment opacity-bg" -->
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux namespaces
+                            | namespace | kernel | release date |
+                            |-----------|--------|--------------|
+                            | mount     | 2.4.19 | Aug 2002     |
+                            | ipc       | 2.6.19 | Nov 2006     |
+                            | uts       | 2.6.19 | Nov 2006     |
+                            | pid       | 2.6.24 | Jan 2008     |
+                            | network   | 2.6.24 | Jan 2008     |
+                            | user      | 3.8    | Feb 2013     |
+                            | cgroup    | 4.6    | May 2016     |
+
+                            Note:
+                            * inspired by Plan9 from Bell Labs
+                            * 3.8+ only root
+                            * https://lwn.net/Articles/531114/
+                            * docker supports user namespace
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux namespaces
+
+                            ```
+                            # ls -al /proc/self/ns
+
+                            total 0
+                            dr-x--x--x 2 seidl seidl 0 Jun  1 23:12 .
+                            dr-xr-xr-x 9 seidl seidl 0 Jun  1 23:12 ..
+                            lrwxrwxrwx 1 seidl seidl 0 Jun  1 23:12 cgroup -> 'cgroup:[4026531835]'
+                            lrwxrwxrwx 1 seidl seidl 0 Jun  1 23:12 ipc -> 'ipc:[4026531839]'
+                            lrwxrwxrwx 1 seidl seidl 0 Jun  1 23:12 mnt -> 'mnt:[4026531840]'
+                            lrwxrwxrwx 1 seidl seidl 0 Jun  1 23:12 net -> 'net:[4026531969]'
+                            lrwxrwxrwx 1 seidl seidl 0 Jun  1 23:12 pid -> 'pid:[4026531836]'
+                            lrwxrwxrwx 1 seidl seidl 0 Jun  1 23:12 user -> 'user:[4026531837]'
+                            lrwxrwxrwx 1 seidl seidl 0 Jun  1 23:12 uts -> 'uts:[4026531838]'
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux namespaces
+
+                            # exec to namespace
+
+                            ## (exec to container)
+
+                            ```
+                            docker exec -it container bash
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux namespaces - exec to namespace
+
+                            `setns - reassociate thread with a namespace`
+
+                            ```
+                            #define _GNU_SOURCE             /* See feature_test_macros(7) */
+                            #include <sched.h>
+                            int setns(int fd, int nstype)
+                            ```
+
+                            Note:
+
+                            `man setns`:
+                            > Given a file descriptor referring to a namespace, reassociate the calling thread with that namespace.
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux namespaces - exec to namespace
+
+                            `namespace exec`:
+                            ```
+                            setns(path("/proc/$pid/ns/net")->filehandle(), CLONE_NEWNET);
+                            setns(path("/proc/$pid/ns/uts")->filehandle(), CLONE_NEWUTS);
+                            setns(path("/proc/$pid/ns/ipc")->filehandle(), CLONE_NEWIPC);
+                            setns(path("/proc/$pid/ns/pid")->filehandle(), CLONE_NEWPID);
+                            setns(path("/proc/$pid/ns/mnt")->filehandle(), CLONE_NEWNS);
+
+                            exec cmd;
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux namespaces - exec to namespace
+
+                            [demo](../examples/01_exec_to_container)
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux namespaces - exec to namespace
+
+                            ```
+                            nsenter -t 1234 --mount --utc --ipc --net --pid
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux namespaces 
+                            
+                            # run (new) namespace
+
+                            ## != run (new) container
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux namespaces - run (new) namespace
+                            
+                            `clone, __clone2 - create a child process`
+
+                            ```
+                            /* Prototype for the glibc wrapper function */
+                            #define _GNU_SOURCE
+                            #include <sched.h>
+
+                            int clone(int (*fn)(void *), void *child_stack,
+                                      int flags, void *arg, ...
+                                      /* pid_t *ptid, struct user_desc *tls, pid_t *ctid */ );
+
+                            /* Prototype for the raw system call */
+                            long clone(unsigned long flags, void *child_stack,
+                                      void *ptid, void *ctid,
+                                      struct pt_regs *regs);
+                            ```
+
+                            Note:
+                            * `clone` - glibc clone() wrapper function / syscall
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux namespaces - run (new) namespace
+                            
+                            `unshare - disassociate parts of the process execution context`
+
+                            ```
+                            #define _GNU_SOURCE
+                            #include <sched.h>
+                            
+                            int unshare(int flags);
+
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux namespaces - run (new) namespace
+                            
+                            [demo](../examples/02_unshare)
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux namespaces  - links/resources
+
+                            * [wiki - linux namespaces](https://en.wikipedia.org/wiki/Linux_namespaces)
+                            * [man unshare](https://linux.die.net/man/2/unshare)
+                            * [man clone](https://linux.die.net/man/2/clone)
+                            * [man namespaces](http://man7.org/linux/man-pages/man7/namespaces.7.html)
+                            * [man mount_namespaces](http://man7.org/linux/man-pages/man7/mount_namespaces.7.html)
+                            * [Sys::Linux::Namespace](https://metacpan.org/pod/Sys::Linux::Namespace)
+                            * [Linux::Clone](https://metacpan.org/pod/Linux::Clone)
+                            * [python setns](https://gist.github.com/cgwalters/1aa68b1b9642496f30f8)
+                        </script>
+                    </section>
+
+                </section>
+
+                <section>
+				    <section data-markdown>
+                        <script type="text/template">
+                            <!-- .slide: data-background-image="img/container-1638068_1920.jpg" -->
+                            # cgroups <!-- .element: class="fragment opacity-bg" -->
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### cgroups
+
+                            ## resource control ?
+
+                            ```
+                            docker run --memory 10M --cpus 2 ...
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### cgroups
+                            cpu:
+                            ```
+                            mkdir /sys/fs/cgroup/cpuset/mygroup
+                            echo 2 > /sys/fs/cgroup/cpuset/mygroup/cpuset.cpus
+                            echo $$ > /sys/fs/cgroup/cpuset/mygroup/cgroup.procs
+                            ```
+
+                            memory:
+                            ```
+                            mkdir /sys/fs/cgroup/memory/mygroup
+                            echo 10000000 > /sys/fs/cgroup/memory/mygroup/memory.limit_in_bytes
+                            echo $$ > /sys/fs/cgroup/memory/mygroup/cgroup.procs
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### cgroups - links/resources
+                            * http://wvi.cz/diyC/cgroups/
+                        </script>
+                    </section>
+
+                </section>
+
+                <section>
+				    <section data-markdown>
+                        <script type="text/template">
+                            <!-- .slide: data-background-image="img/belgium-1601918_1920.jpg" -->
+                            # iptables && virtual ethernet <!-- .element: class="fragment opacity-bg" -->
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### iptables && virtual ethernet
+
+                            ```
+                            docker run -p 5678:1234 ...
+                            ```
+
+                            Note:
+                            * `docker run -net=host` - don't set network namespace (probably?)
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### iptables && virtual ethernet
+
+                            ![virtual ethernet](img/veth.png)
+
+                            Note:
+                            * A bridge network has a corresponding linux bridge interface on the docker host that acts as a layer2 switch, and which connects different containers on the same subnet.
+                            * Each network interface in a container has a corresponding virtual interface on the docker host that is created while the container is running.
+                            * A traffic capture from the docker host on the bridge interface is equivalent to configuring a SPAN port on a switch in that you can see all inter-container communication on that network.
+                            * A traffic capture from the docker host on the virtual interface (veth-*) will show all traffic the container is sending on a particular subnet.
+
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### iptables && virtual ethernet
+
+                            ```
+                            docker run -p 18080:28080 nginx
+                            ```
+
+                            ```
+                            #iptables -L -tnat
+
+                            Chain POSTROUTING (policy ACCEPT)
+                            target     prot opt source               destination         
+                            MASQUERADE  all  --  172.17.0.0/16        anywhere            
+                            MASQUERADE  tcp  --  172.17.0.2           172.17.0.2           tcp dpt:28080
+                            
+                            Chain DOCKER (2 references)
+                            target     prot opt source               destination         
+                            RETURN     all  --  anywhere             anywhere            
+                            DNAT       tcp  --  anywhere             anywhere             tcp dpt:18080 to:172.17.0.2:28080 
+                            ```
+
+                            Note:
+                            * Linux iptables rules are used to block different networks (and sometimes hosts within the network) from communicating using the filter table. These rules are usually added in the DOCKER-ISOLATION chain.
+                            * Containers communicating with the outside world through a bridge interface have their IP hidden behind the docker host’s IP address. This is done by adding rules to the nat table in iptables.
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### iptables && virtual ethernet - links/resources
+                            * [netns and cni](http://murat1985.github.io/kubernetes/cni/2016/05/14/netns-and-cni.html)
+                            * http://www.linuxjournal.com/content/concerning-containers-connections-docker-networking
+                            * [docker docs - networking](https://docs.docker.com/engine/userguide/networking)
+                            * [docker docs - container communication](https://docs.docker.com/engine/userguide/networking/default_network/container-communication/)
+                            * [docker nwtworking internals](http://securitynik.blogspot.cz/2016/12/docker-networking-internals-how-docker_16.html)
+                        </script>
+                    </section>
+                </section>
+
+                <section>
+				    <section data-markdown>
+                        <script type="text/template">
+                            <!-- .slide: data-background-image="img/container-2136505_1920.jpg" -->
+                            # linux capabilities <!-- .element: class="fragment opacity-bg" -->
+
+                            Note:
+                            kernel 2.2+
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux capabilities 
+
+                            ```
+                            docker run --cap-add CAP_SYS_ADMIN ...
+                            ```
+
+                            Note:
+                            * privileged vs. nonprivileged process
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux capabilities
+
+                            ```
+                            capsh --print
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### linux capabilities - links/resources
+
+                            * [man capabilities](https://linux.die.net/man/7/capabilities)
+                            * [man cap_set_proc](https://linux.die.net/man/3/cap_set_proc)
+
+                        </script>
+                    </section>
+
+
+                </section>
+
+                <section>
+				    <section data-markdown>
+                        <script type="text/template">
+                            <!-- .slide: data-background-image="img/nature-2129493_1920.jpg" -->
+
+                            # images <!-- .element: class="fragment opacity-bg" -->
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            # images 
+
+                            ## union filesystems
+
+                            ```
+                            docker pull image
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+
+                            * layers
+                            * copy-on-write
+                            * ephemeral (container)
+
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+
+                            Dockerfile:
+                            ```
+                            FROM alpine
+
+                            RUN touch /test
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+
+                            ```
+                            docker save
+                            ```
+
+                            ```
+                            docker commit
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+
+                            [demo](../examples/03_image)
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images - links/resources 
+                            * [overlay fs](http://blog.programster.org/overlayfs/)
+                            * [example overlay fs usage](https://askubuntu.com/questions/699565/example-overlayfs-usage)
+                            * [docker docs - overlay](https://docs.docker.com/engine/userguide/storagedriver/overlayfs-driver)
+                        </script>
+                    </section>
+                </section>
+
+                <section>
+                    <section data-markdown>
+                        <script type="text/template">
+                            <!-- .slide: data-background-image="img/container-429947_1920.jpg" -->
+
+                            # run new container <!-- .element: class="fragment opacity-bg" -->
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### run new container 
+
+                            ```
+                            docker run ...
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### run new container
+
+                            ```
+                            clone(...)
+
+                            set_bridge_network() //host context
+
+                            mount(image)
+                            pivot_root(image, old)
+                            chroot(image)
+
+                            mount(/dev)
+                            mount(/proc)
+                            umount(old)
+
+                            cap_set_proc(...)
+                            setenv(...)
+
+                            exec(...)
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### run new container
+
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### run new container - links/resources 
+                            * https://github.com/w-vi/diyc
+                            * https://containerd.io/
+                            * https://runc.io/
+                            * [containerd standalone runtimes](https://hackernoon.com/docker-containerd-standalone-runtimes-heres-what-you-should-know-b834ef155426)
+                            * [container's anatomy](https://www.slideshare.net/jpetazzo/anatomy-of-a-container-namespaces-cgroups-some-filesystem-magic-linuxcon)
+                            * [container from scratch](https://ericchiang.github.io/post/containers-from-scratch)
+                            * [container from scratch - golang](https://github.com/lizrice/containers-from-scratch)
+                        </script>
+                    </section>
+                </section>
+
+                <section>
+                    <section data-markdown>
+                        <script type="text/template">
+                            <!-- .slide: data-background-image="img/hamburg-1658460_1920.jpg" -->
+                            # conclusion <!-- .element: class="fragment opacity-bg" -->
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### Conclusion 
+
+                            * technology backend of container are stable technology
+                                * linux namespaces
+                                * cgroups
+                                * linux capabilities
+                                * iptables
+                                * union filestystem
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### Conclusion 
+
+                            * technology backend of container are stable technology
+                            * added value of docker is tooling (and PR)
+                            * there is more then docker done solutions (for example LXC)
+                            * if you _must_ make new container solution looks to 
+                                * [moby project](https://mobyproject.org)
+                                * [open container initiative](https://www.opencontainers.org)
+                           
+                        </script>
+                    </section>
+                </section>
+
+                <section>
+                    <section data-markdown>
+                        <script type="text/template">
+                            <!-- .slide: data-background-image="img/industry-438428_1920.jpg" -->
+                            # SOURCES<!-- .element: class="fragment opacity-bg" -->
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### sources 
+                            * [docker 1.11](https://medium.com/@tiffanyfayj/docker-1-11-et-plus-engine-is-now-built-on-runc-and-containerd-a6d06d7e80ef)
+                            * [openvz containers](https://openvz.org/WP/What_are_containers)
+                            * [mount dev, proc, sys in a chroot environment](https://superuser.com/questions/165116/mount-dev-proc-sys-in-a-chroot-environment)
+                        </script>
+                    </section>
+
+                    <section data-markdown>
+                        <script type="text/template">
+                            <!-- .slide: data-background-image="img/industry-438428_1920.jpg" -->
+                            # thank you - Q&A?<!-- .element: class="fragment opacity-bg" -->
+                        </script>
+                    </section>
+                </section>
+			</div>
+		</div>
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+		</script>
+	</body>
+</html>
