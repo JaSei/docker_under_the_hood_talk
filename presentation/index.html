@@ -318,7 +318,7 @@
                         <script type="text/template">
                             ### cgroups
 
-                            ## resource control ?
+                            ## resource control
 
                             ```
                             docker run --memory 10M --cpus 2 ...
@@ -349,6 +349,7 @@
                         <script type="text/template">
                             ### cgroups - links/resources
                             * http://wvi.cz/diyC/cgroups/
+                            * http://man7.org/linux/man-pages/man7/cgroups.7.html
                         </script>
                     </section>
 
@@ -581,23 +582,32 @@
                             ### run new container
 
                             ```
-                            clone(...)
+                            pid = clone(CLONE_NEWNS|CLONE_NEWPID|CLONE_NEWIPC|CLONE_NEWUTS|CLONE_NEWNET)
 
-                            set_bridge_network() //host context
+                            set_bridge_network() //host context (docker run --net=bridge ...)
 
-                            mount(image)
+                            mount(image) //mount union filesystem
                             pivot_root(image, old)
-                            chroot(image)
-
-                            mount(/dev)
+                            
                             mount(/proc)
+                            mount(/dev)  // mount(/some/mnt) docker -v /some/host/mnt:/some/mnt  ...
                             umount(old)
 
-                            cap_set_proc(...)
-                            setenv(...)
+                            cap_set_proc(...) // docker run --cap-add ...
+                            setenv(...) // docker run -e ...
 
                             exec(...)
                             ```
+
+                            Note:
+                            `pivot_root` - The following restrictions apply to new_root and put_old: (from `man pivot_root`)
+                            * They must be directories.
+                            * new_root and put_old must not be on the same file system as the current root.
+                            * put_old must be underneath new_root, that is, adding a nonzero number of /.. to the string pointed to by put_old must yield the same directory as new_root.
+                            * No other file system may be mounted on put_old.
+
+                            * Why `pivot_root` and no `chroot`? Because to switch the complete system over to a new root directory and remove dependencies on the old one.
+                            * `pivot_root` is more secure then `chroot`
                         </script>
                     </section>
 
@@ -605,6 +615,7 @@
                         <script type="text/template">
                             ### run new container
 
+                            [demo](../examples/05_run_container)
                         </script>
                     </section>
 
@@ -618,6 +629,9 @@
                             * [container's anatomy](https://www.slideshare.net/jpetazzo/anatomy-of-a-container-namespaces-cgroups-some-filesystem-magic-linuxcon)
                             * [container from scratch](https://ericchiang.github.io/post/containers-from-scratch)
                             * [container from scratch - golang](https://github.com/lizrice/containers-from-scratch)
+                            * [difference between chroot and pivot_root](https://lists.debian.org/debian-handheld/2004/12/msg00029.html)
+                            * https://lk4d4.darth.io/posts/unpriv3/
+                            * [namespace in go - mount](https://medium.com/@teddyking/namespaces-in-go-mount-e4c04fe9fb29)
                         </script>
                     </section>
                 </section>
