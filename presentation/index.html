@@ -200,6 +200,8 @@
 
                             `man setns`:
                             > Given a file descriptor referring to a namespace, reassociate the calling thread with that namespace.
+
+                            golang have problem with this syscall, because syscall run in special thread
                         </script>
                     </section>
 
@@ -310,6 +312,7 @@
                             * [Sys::Linux::Namespace](https://metacpan.org/pod/Sys::Linux::Namespace)
                             * [Linux::Clone](https://metacpan.org/pod/Linux::Clone)
                             * [python setns](https://gist.github.com/cgwalters/1aa68b1b9642496f30f8)
+                            * [golang scheduler](https://morsmachine.dk/go-scheduler)
                         </script>
                     </section>
 
