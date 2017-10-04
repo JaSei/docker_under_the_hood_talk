@@ -4,7 +4,7 @@ this is talk with demos for show container principals
 
 ## presentation
 
-presentation (source) is in [docs dir](docs) and presentation is availabe [https://jasei.github.io/docker_under_the_hood_talk/)](https://jasei.github.io/docker_under_the_hood_talk/)
+[presentation](presentation)
 
 ## examples
 1. [container_exec](./examples/01_container_exec)
