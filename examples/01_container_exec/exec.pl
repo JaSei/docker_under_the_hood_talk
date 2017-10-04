@@ -8,7 +8,8 @@ use Path::Tiny;
 require 'syscall.ph';
 require 'linux/sched.ph';
 
-my $pid = 28778;
+#my $pid = 28778;
+my $pid = $ARGV[0] or die 'No argument (pid)';
 
 #setns(CLONE_NEWNET(), 'net', 'ip a');
 #say "\n----\n";
