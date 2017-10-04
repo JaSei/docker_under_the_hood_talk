@@ -2,7 +2,7 @@
 
 this is talk with demos for show container principals
 
-[presentation](presentation)
+[presentation](docs)
 
 ## examples
 1. [exec_to_container](examples/01_exec_to_container)

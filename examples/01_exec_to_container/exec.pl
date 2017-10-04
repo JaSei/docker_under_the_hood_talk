@@ -8,15 +8,15 @@ use Path::Tiny;
 require 'syscall.ph';
 require 'linux/sched.ph';
 
-my $pid = 21438;
+my $pid = 28778;
 
 #setns(CLONE_NEWNET(), 'net', 'ip a');
-say "\n----\n";
+#say "\n----\n";
 setns(CLONE_NEWUTS(), 'uts', 'hostname');
-say "\n----\n";
-setns(CLONE_NEWPID(), 'pid', 'ps a');
-say "\n----\n";
-setns(CLONE_NEWNS(), 'mnt', 'ls -al /');
+#say "\n----\n";
+#setns(CLONE_NEWPID(), 'pid', 'ps a');
+#say "\n----\n";
+#setns(CLONE_NEWNS(), 'mnt', 'ls -al /');
 
 sub setns($namespace_flag, $namespace_file, $command) {
     say "#Before setns ($namespace_file):\n";
