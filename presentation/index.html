@@ -36,6 +36,7 @@
 
                             Note:
                             * it's principals of container - specific docker implementation could be other (because optimalisations)
+                            * docker add philosophy
                         </script>
                     </section>
                 </section>
@@ -76,15 +77,17 @@
 				    <section data-markdown>
                         <script type="text/template">
                             ### what is container?
-
+                            * docker
                             * lxc
                             * runc 
+                            * rkt
                             * openvz 
                             * ... 
 
                             Note:
                             * runc = `runC is a CLI tool for spawning and running containers according to the OCI specification`
                             * docker 1.11+ use runc, previous use lxc
+                            * google have own container, facebook too
                         </script>
                     </section>
 
@@ -450,6 +453,8 @@
 
                             Note:
                             kernel 2.2+
+
+                            By default, Docker starts containers with a restricted set of capabilities.
                         </script>
                     </section>
 
@@ -482,11 +487,10 @@
 
                             * [man capabilities](https://linux.die.net/man/7/capabilities)
                             * [man cap_set_proc](https://linux.die.net/man/3/cap_set_proc)
+                            * [docker docs - capabilities](https://docs.docker.com/engine/security/security/#linux-kernel-capabilities)
 
                         </script>
                     </section>
-
-
                 </section>
 
                 <section>
@@ -495,6 +499,9 @@
                             <!-- .slide: data-background-image="img/nature-2129493_1920.jpg" -->
 
                             # images <!-- .element: class="fragment opacity-bg" -->
+
+                            Note:
+                            docker philosophy (immutable/ephemeral)
                         </script>
                     </section>
 
@@ -542,11 +549,239 @@
                             ### images
 
                             ```
-                            docker save
+                            docker commit
                             ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+                            #### dockerfile.sh
 
                             ```
-                            docker commit
+                            #!/bin/sh
+
+                            image=dockershell
+                            
+                            #FROM alpine
+                            #RUN touch /test
+                            cid=$(docker run -d alpine touch /test)
+                            docker commit $cid $image
+                            
+                            #RUN rm /test
+                            id=$(docker run -d $image rm /test)
+                            docker commit $id $image
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+
+                            ```
+                            docker save
+                            ```
+                        </script>
+                    </section>
+
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+
+                            ```
+                            #tar tf docerfile.tar
+                            30784cae2b30e82860...318ac1162247f66/
+                            30784cae2b30e82860...318ac1162247f66/VERSION
+                            30784cae2b30e82860...318ac1162247f66/json
+                            30784cae2b30e82860...318ac1162247f66/layer.tar
+                            8ec888c88d3e284cec...b525c7a28eb74de/
+                            8ec888c88d3e284cec...b525c7a28eb74de/VERSION
+                            8ec888c88d3e284cec...b525c7a28eb74de/json
+                            8ec888c88d3e284cec...b525c7a28eb74de/layer.tar
+                            df3b1a0c5f727d0580...3e2aae16ef98c53.json
+                            fe9fa45f2c6c5ae254...3bb96a082274d0a/
+                            fe9fa45f2c6c5ae254...3bb96a082274d0a/VERSION
+                            fe9fa45f2c6c5ae254...3bb96a082274d0a/json
+                            fe9fa45f2c6c5ae254...3bb96a082274d0a/layer.tar
+                            manifest.json
+                            repositories
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+
+                            ```
+                            # cat manifest.json | jq .
+                            [
+                              {
+                                "Config": "df3b1a0c5f727d05802883cd4a21b393285fbd85c906c0a663e2aae16ef98c53.json",
+                                "RepoTags": [
+                                  "dockershell:latest"
+                                ],
+                                "Layers": [
+                                  "30784cae2b30e82860239f7de81fc755f69bc58a77d52c2d8318ac1162247f66/layer.tar",
+                                  "fe9fa45f2c6c5ae2548dc9b6ce824293401d8852914fd1cc03bb96a082274d0a/layer.tar",
+                                  "8ec888c88d3e284cecf7a477edc3f37324bfec32658aa1a09b525c7a28eb74de/layer.tar"
+                                ]
+                              }
+                            ]
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+
+                            ```
+                            # cat df3b1a0c5f727d05802883cd4a21b393285fbd85c906c0a663e2aae16ef98c53.json | jq .
+                            {
+                              "architecture": "amd64",
+                              "config": {
+                                "Hostname": "",
+                                "Domainname": "",
+                                "User": "",
+                                "AttachStdin": false,
+                                "AttachStdout": false,
+                                "AttachStderr": false,
+                                "Tty": false,
+                                "OpenStdin": false,
+                                "StdinOnce": false,
+                                "Env": [
+                                  "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                                ],
+                                "Cmd": [
+                                  "rm",
+                                  "/test"
+                                ],
+                                "Image": "",
+                                "Volumes": null,
+                                "WorkingDir": "",
+                                "Entrypoint": null,
+                                "OnBuild": null,
+                                "Labels": {}
+                              },
+                              "container": "a71a4ec3582cca12b4a088d72ef9841bfa7a687bf94a882997397c548eca1567",
+                              "container_config": {
+                                "Hostname": "a71a4ec3582c",
+                                "Domainname": "",
+                                "User": "",
+                                "AttachStdin": false,
+                                "AttachStdout": false,
+                                "AttachStderr": false,
+                                "Tty": false,
+                                "OpenStdin": false,
+                                "StdinOnce": false,
+                                "Env": [
+                                  "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+                                ],
+                                "Cmd": [
+                                  "rm",
+                                  "/test"
+                                ],
+                                "Image": "dockershell",
+                                "Volumes": null,
+                                "WorkingDir": "",
+                                "Entrypoint": null,
+                                "OnBuild": null,
+                                "Labels": {}
+                              },
+                              "created": "2017-06-06T19:21:05.087667249Z",
+                              "docker_version": "17.05.0-ce",
+                              "history": [
+                                {
+                                  "created": "2017-05-10T16:38:16.632557712Z",
+                                  "created_by": "/bin/sh -c #(nop) ADD file:63f63606d6e289eb607c90e31de81802258906712727e473a2898f0f1ae55bb5 in / "
+                                },
+                                {
+                                  "created": "2017-05-10T16:38:17.391552466Z",
+                                  "created_by": "/bin/sh -c #(nop)  CMD [\"/bin/sh\"]",
+                                  "empty_layer": true
+                                },
+                                {
+                                  "created": "2017-06-06T19:21:04.063518852Z",
+                                  "created_by": "touch /test"
+                                },
+                                {
+                                  "created": "2017-06-06T19:21:05.087667249Z",
+                                  "created_by": "rm /test"
+                                }
+                              ],
+                              "os": "linux",
+                              "rootfs": {
+                                "type": "layers",
+                                "diff_ids": [
+                                  "sha256:e154057080f406372ebecadc0bfb5ff8a7982a0d13823bab1be5b86926c6f860",
+                                  "sha256:3dd36e338e88059d3aa6d1f256be2d306828761da4538b3d492ed422c2c85bb2",
+                                  "sha256:04867a11ab34d36db02c9a2720211c203c1128fcc45b567f36acd976ac947f86"
+                                ]
+                              }
+                            }
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images 
+                            #### 1. layer (`FROM alpine`)
+
+                            ```
+                            # tar tf 30784cae2b30e82860...318ac1162247f66/layer.tar
+                            bin/
+                            bin/ash
+                            bin/base64
+                            bin/bbconfig
+                            bin/busybox
+                            bin/cat
+                            bin/catv
+                            bin/chgrp
+                            bin/chmod
+                            bin/chown
+                            bin/conspy
+                            bin/cp
+                            bin/cpio
+                            bin/date
+                            bin/dd
+                            bin/df
+                            bin/dmesg
+                            bin/dnsdomainname
+                            bin/dumpkmap
+                            bin/echo
+                            bin/ed
+                            bin/egrep
+                            bin/false
+                            ...
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+                            #### 2. layer (`touch /test`)
+
+                            ```
+                            # tar tf fe9fa45f2c6c5ae254...3bb96a082274d0a/layer.tar
+                            test
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+                            #### 3. layer (`rm /test`)
+
+                            ```
+                            # tar tf 8ec888c88d3e284cec...b525c7a28eb74de/layer.tar
+                            .wh.test
                             ```
                         </script>
                     </section>
@@ -556,6 +791,59 @@
                             ### images
 
                             [demo](../examples/03_image)
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+                            #### overlay
+
+                            ![docker docs - overlay](img/overlay_constructs.jpg)
+
+                            Note:
+                            Docker support many storage backends, for example overlay - is simple
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+                            #### overlay
+
+                            ```
+                            mount -t overlay -o lowerdir=layer1,upperdir=layer2 l12
+                            mount -t overlay -o lowerdir=l12,upperdir=layer3 image
+                            mount -t overlay -o lowerdir=image,upperdir=ephemeral container
+                            ```
+
+                            Note:
+                            pseudocode - workdir missing
+
+                            last mount fail - `overlayfs: maximum fs stacking depth exceeded`
+
+                            overlay2 this fix
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+                            #### overlay2
+
+                            ```
+                            mount -t overlay \
+                            -o lowerdir=layer3:layers2:layer1,upperdir=ephemeral \
+                            container
+                            ```
+                        </script>
+                    </section>
+
+				    <section data-markdown>
+                        <script type="text/template">
+                            ### images
+
+                            [demo](../examples/04_overlay)
                         </script>
                     </section>
 
@@ -674,7 +962,7 @@
                             ### Conclusion 
 
                             * backend of container are stable technologies
-                            * added value of docker is tooling (and PR)
+                            * added value of docker is tooling, philosophy (and PR)
                             * there are more container solutions than just docker (for example LXC)
                             * if you _must_ make new container solution, look at
                                 * [moby project](https://mobyproject.org)
